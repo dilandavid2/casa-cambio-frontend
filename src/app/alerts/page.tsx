@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import Link from "next/link";
+import { Sidebar } from "@/components/dashboard/sidebar";
 
 interface TransferVerification {
   id: number;
@@ -70,8 +71,10 @@ export default function AlertsPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-black p-8 text-white">
-      <h1 className="text-5xl font-bold">Verificaciones de transferencias</h1>
+    <div className="flex min-h-screen bg-black text-white">
+    <Sidebar />
+    <main className="min-w-0 flex-1 px-4 pb-4 pt-20 sm:px-8 sm:pb-8 md:pt-8">
+      <h1 className="text-3xl font-bold sm:text-5xl">Verificaciones de transferencias</h1>
       <p className="mt-2 text-zinc-400">
         Pagos bancarios pendientes por confirmar.
       </p>
@@ -85,8 +88,8 @@ export default function AlertsPage() {
         </Link>
       </div>
 
-      <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-        <div className="mb-6 flex items-center justify-between">
+      <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold">
               Transferencias por verificar
@@ -170,5 +173,6 @@ export default function AlertsPage() {
         )}
       </section>
     </main>
+    </div>
   );
 }

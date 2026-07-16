@@ -10,7 +10,7 @@ export default function DashboardPage() {
     <div className="flex min-h-screen bg-zinc-950 text-white">
       <Sidebar />
 
-      <main className="flex-1 p-6 space-y-6">
+      <main className="min-w-0 flex-1 space-y-6 px-4 pb-4 pt-20 sm:px-6 sm:pb-6 md:pt-6">
         <Header />
 
         <StatsCards />

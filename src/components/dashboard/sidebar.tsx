@@ -10,13 +10,19 @@ import {
   Repeat,
   LogOut,
   Coins,
+  Menu,
+  X,
 } from "lucide-react";
 import { api } from "@/services/api";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => setOpen(false), [pathname]);
 
   async function logout() {
     await api.post("/auth/logout");
@@ -52,7 +58,22 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="min-h-screen w-64 border-r border-zinc-800 bg-zinc-900 p-6">
+    <>
+      <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 md:hidden">
+        <Image src="/logo.png" alt="Cambios Díaz" width={110} height={48} priority className="h-11 w-auto" />
+        <button type="button" onClick={() => setOpen(true)} aria-label="Abrir menú" className="rounded-lg border border-zinc-700 p-2 text-white">
+          <Menu size={24} />
+        </button>
+      </header>
+
+      {open && <button type="button" aria-label="Cerrar menú" onClick={() => setOpen(false)} className="fixed inset-0 z-40 bg-black/70 md:hidden" />}
+
+    <aside className={`fixed inset-y-0 left-0 z-50 min-h-screen w-72 border-r border-zinc-800 bg-zinc-900 p-6 transition-transform md:static md:z-auto md:w-64 md:shrink-0 md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
+      <div className="flex justify-end md:hidden">
+        <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar menú" className="rounded-lg p-2 text-zinc-300 hover:bg-zinc-800">
+          <X size={24} />
+        </button>
+      </div>
       <div className="p-4 flex justify-center">
         <Image
           src="/logo.png"
@@ -93,5 +114,6 @@ export function Sidebar() {
         Cerrar sesión
       </button>
     </aside>
+    </>
   );
 }

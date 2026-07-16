@@ -76,9 +76,9 @@ export default function CurrenciesPage() {
   return (
     <div className="flex min-h-screen bg-black text-white">
       <Sidebar />
-      <main className="flex-1 p-6">
+      <main className="min-w-0 flex-1 px-4 pb-4 pt-20 sm:px-6 sm:pb-6 md:pt-6">
         <div className="mb-6">
-          <h1 className="text-4xl font-bold">Monedas</h1>
+          <h1 className="text-3xl font-bold sm:text-4xl">Monedas</h1>
           <p className="mt-2 text-zinc-400">
             Añade las monedas utilizadas por cuentas y operaciones. La tasa se indica al crear cada operación.
           </p>
@@ -98,8 +98,8 @@ export default function CurrenciesPage() {
           </button>
         </form>
 
-        <div className="overflow-hidden rounded-xl border border-zinc-800">
-          <table className="w-full">
+        <div className="overflow-x-auto rounded-xl border border-zinc-800">
+          <table className="min-w-[720px] w-full">
             <thead className="bg-zinc-900 text-left text-zinc-400">
               <tr><th className="p-4">Código</th><th className="p-4">Nombre</th><th className="p-4">Costo operacional</th><th className="p-4">Estado</th><th className="p-4">Acciones</th></tr>
             </thead>

@@ -56,28 +56,28 @@ export function AccountsTable() {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-      <div className="flex items-center justify-between mb-5">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <h2 className="text-xl font-semibold">
           Lista de cuentas
         </h2>
 
         <button
           onClick={() => setShowModal(true)}
-          className="rounded-lg bg-white px-4 py-2 text-black font-medium hover:bg-zinc-200"
+          className="rounded-lg bg-white px-4 py-3 text-black font-medium hover:bg-zinc-200 sm:ml-auto sm:py-2"
         >
           Nueva cuenta
         </button>
         
         <button
           onClick={() => setShowTransferModal(true)}
-          className="rounded-lg bg-purple-600 px-4 py-2 text-white font-medium hover:bg-purple-700"
+          className="rounded-lg bg-purple-600 px-4 py-3 text-white font-medium hover:bg-purple-700 sm:py-2"
         >
           Transferir entre cuentas
         </button>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full">
           <thead className="text-zinc-400 border-b border-zinc-800">
             <tr>
@@ -156,6 +156,28 @@ export function AccountsTable() {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="space-y-3 md:hidden">
+        {accounts.map((account) => (
+          <article key={account.id} className="rounded-xl border border-zinc-700 bg-black/30 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link href={`/accounts/${account.id}`} className="block truncate text-lg font-semibold hover:text-green-400">{account.name}</Link>
+                <p className="mt-1 text-sm text-zinc-400">{account.country} · {account.currency?.code}</p>
+              </div>
+              <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs ${account.isActive ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{account.isActive ? "Activa" : "Inactiva"}</span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div><p className="text-zinc-500">Tipo</p><p>{account.type === "CASH" ? "Efectivo" : account.type === "BANK_TRANSFER" ? "Transferencia" : "Billetera digital"}</p></div>
+              <div className="text-right"><p className="text-zinc-500">Saldo</p><p className="text-lg font-bold">{Number(account.balance).toLocaleString("es-CO")} {account.currency?.code}</p></div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {Number(account.balance) === 0 && <button onClick={() => { setSelectedAccount(account); setShowInitialBalanceModal(true); }} className="rounded-lg bg-blue-600 px-3 py-2 text-sm">Saldo inicial</button>}
+              <button onClick={() => deleteAccount(account)} className="rounded-lg bg-red-600/20 px-3 py-2 text-sm text-red-400">Borrar</button>
+            </div>
+          </article>
+        ))}
+        {accounts.length === 0 && <p className="py-8 text-center text-zinc-400">No hay cuentas registradas.</p>}
       </div>
       {showModal && (
         <CreateAccountModal
