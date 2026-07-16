@@ -49,7 +49,7 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
   const [useSplits, setUseSplits] = useState(false);
   const [copToTargetRate, setCopToTargetRate] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
-  const [calculationMode, setCalculationMode] = useState<"RATE" | "AMOUNT">("RATE");
+  const [calculationMode, setCalculationMode] = useState<"RATE" | "AMOUNT">("AMOUNT");
   const [paymentMode, setPaymentMode] = useState<"IMMEDIATE" | "PENDING">("IMMEDIATE");
   const [splits, setSplits] = useState<SplitItem[]>([
   {
@@ -155,9 +155,7 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
       if (
         paymentMode === "IMMEDIATE" &&
         !useSplits &&
-        targetCurrencyCode !== "COP" &&
-        calculationMode === "RATE" &&
-        Number(copToTargetRate) <= 0
+        false
       ) {
         alert("Debes indicar una tasa destino válida");
         return;
@@ -165,7 +163,6 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
       if (
         paymentMode === "IMMEDIATE" &&
         !useSplits &&
-        calculationMode === "AMOUNT" &&
         Number(targetAmount) <= 0
       ) {
         alert("Debes indicar cuánto recibirá el cliente");
@@ -175,11 +172,18 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
       const calculatedSourceRate =
         sourceCurrencyCode === "COP"
           ? 1
-          : calculationMode === "AMOUNT" &&
-              targetCurrencyCode === "COP" &&
-              Number(targetAmount) > 0
+          : targetCurrencyCode === "COP" && Number(targetAmount) > 0
             ? Number(targetAmount) / amount
             : Number(manualRateToCOP);
+
+      if (
+        sourceCurrencyCode !== "COP" &&
+        targetCurrencyCode !== "COP" &&
+        calculatedSourceRate <= 0
+      ) {
+        alert("Para cambios entre dos monedas extranjeras indica la tasa de la moneda que ingresa a COP");
+        return;
+      }
 
       const valueCOP =
         paymentMode === "IMMEDIATE"
@@ -189,18 +193,14 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
       const calculatedTargetRate =
         targetCurrencyCode === "COP"
           ? 1
-          : calculationMode === "AMOUNT" && Number(targetAmount) > 0
-          ? valueCOP / Number(targetAmount)
-          : Number(copToTargetRate);
+          : valueCOP / Number(targetAmount);
       const amountTargetEstimated =
         paymentMode === "IMMEDIATE"
           ? useSplits
             ? 0
             : targetCurrencyCode === "COP"
               ? valueCOP
-              : calculationMode === "AMOUNT"
-              ? Number(targetAmount)
-              : valueCOP / calculatedTargetRate
+              : Number(targetAmount)
           : amount;
       await api.post("/operations", {
         code,
@@ -281,7 +281,7 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
   const originRate =
     sourceCurrencyCode === "COP"
       ? 1
-      : calculationMode === "AMOUNT" && targetCurrencyCode === "COP" && Number(targetAmount) > 0
+      : targetCurrencyCode === "COP" && Number(targetAmount) > 0
         ? Number(targetAmount) / Number(amountSource || 1)
         : Number(manualRateToCOP || 0);
 
@@ -289,6 +289,13 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
     Number(amountSource || 0) * originRate;
 
   const remainingAmount = totalOriginCOP - totalSplits;
+  const crossRate =
+    Number(amountSource) > 0 && Number(targetAmount) > 0
+      ? Number(targetAmount) / Number(amountSource)
+      : 0;
+  const inverseCrossRate = crossRate > 0 ? 1 / crossRate : 0;
+  const formatRate = (value: number) =>
+    value.toLocaleString("es-CO", { maximumFractionDigits: 8 });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
@@ -386,16 +393,16 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
                   ))}
               </select>
 
-              {sourceCurrencyCode !== "COP" && !(calculationMode === "AMOUNT" && targetCurrencyCode === "COP") && <div className="space-y-2">
+              {sourceCurrencyCode !== "COP" && targetCurrencyCode !== "COP" && targetCurrencyId && <div className="space-y-2">
                 <label className="text-sm text-zinc-400">
-                  Tasa de la moneda recibida a COP
+                  Referencia contable: 1 {sourceCurrencyCode} en COP
                 </label>
 
                 <input
                   type="number"
                   value={manualRateToCOP}
                   onChange={(e) => setManualRateToCOP(e.target.value)}
-                  placeholder="Ej: 0.88"
+                  placeholder="Necesaria para utilidad y reportes en COP"
                   className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3"
                 />
               </div>}
@@ -419,7 +426,7 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
 
             {paymentMode === "IMMEDIATE" && !useSplits && targetCurrencyId && (
               <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2 rounded-lg border border-zinc-700 p-1">
+                <div className="hidden grid-cols-2 gap-2 rounded-lg border border-zinc-700 p-1">
                     <button type="button" onClick={() => setCalculationMode("RATE")} className={`rounded-md px-3 py-2 ${calculationMode === "RATE" ? "bg-white text-black" : "text-zinc-400"}`}>Colocar tasa</button>
                     <button type="button" onClick={() => setCalculationMode("AMOUNT")} className={`rounded-md px-3 py-2 ${calculationMode === "AMOUNT" ? "bg-white text-black" : "text-zinc-400"}`}>Colocar monto</button>
                 </div>
@@ -433,7 +440,10 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
                   <input type="number" step="0.01" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} placeholder={`Monto que recibirá el cliente en ${targetCurrencyCode || "moneda destino"}`} className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3" />
                 )}
                 {calculationMode === "AMOUNT" && Number(targetAmount) > 0 && (
-                  <p className="text-sm text-zinc-400">Tasa calculada: {(targetCurrencyCode === "COP" ? Number(targetAmount) / Number(amountSource || 1) : totalOriginCOP / Number(targetAmount)).toLocaleString("es-CO")} COP</p>
+                  <div className="rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-sm text-zinc-300">
+                    <p>1 {sourceCurrencyCode} = <strong>{formatRate(crossRate)} {targetCurrencyCode}</strong></p>
+                    <p>1 {targetCurrencyCode} = <strong>{formatRate(inverseCrossRate)} {sourceCurrencyCode}</strong></p>
+                  </div>
                 )}
               </div>
             )}
@@ -591,13 +601,13 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
               <div className="flex justify-between">
                 <span className="text-zinc-400">Valor equivalente COP:</span>
                 <span>
-                  {(Number(amountSource) * Number(manualRateToCOP)).toLocaleString("es-CO")} COP
+                  {totalOriginCOP.toLocaleString("es-CO")} COP
                 </span>
               </div>
 
               <div className="flex justify-between">
                 <span className="text-zinc-400">Tasa utilizada:</span>
-                <span>{targetCurrencyCode === "COP" ? originRate.toLocaleString("es-CO") : calculationMode === "AMOUNT" ? (totalOriginCOP / Number(targetAmount)).toLocaleString("es-CO") : copToTargetRate}</span>
+                <span>1 {sourceCurrencyCode} = {formatRate(crossRate)} {targetCurrencyCode}</span>
               </div>
 
               <div className="flex justify-between font-bold text-green-400">
