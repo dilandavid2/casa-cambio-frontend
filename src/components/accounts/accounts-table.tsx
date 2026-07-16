@@ -11,6 +11,7 @@ interface Account {
   id: number;
   name: string;
   country: string;
+  type: string;
   currency: {
     code: string;
     name: string;
@@ -37,6 +38,20 @@ export function AccountsTable() {
       setAccounts(response.data);
     } catch (error) {
       console.error(error);
+    }
+  }
+
+  async function deleteAccount(account: Account) {
+    const pin = window.prompt(
+      `Ingresa tu PIN de seguridad para borrar ${account.name}`,
+    );
+    if (!pin) return;
+    try {
+      await api.delete(`/accounts/${account.id}`, { data: { pin } });
+      await loadAccounts();
+    } catch (error: any) {
+      const message = error.response?.data?.message;
+      alert(Array.isArray(message) ? message.join(", ") : message || "No se pudo borrar la cuenta");
     }
   }
 
@@ -70,6 +85,7 @@ export function AccountsTable() {
               <th className="text-left py-3">Nombre</th>
               <th className="text-left py-3">País</th>
               <th className="text-left py-3">Moneda</th>
+              <th className="text-left py-3">Tipo</th>
               <th className="text-left py-3">Balance</th>
               <th className="text-left py-3">Estado</th>
               <th className="text-left py-3">Acciones</th>
@@ -98,6 +114,16 @@ export function AccountsTable() {
                 <td className="py-4">{account.currency?.code}</td>
 
                 <td className="py-4">
+                  {account.type === "CASH"
+                    ? "Efectivo"
+                    : account.type === "BANK_TRANSFER"
+                      ? "Transferencia"
+                      : account.type === "DIGITAL_WALLET"
+                        ? "Billetera digital"
+                        : account.type}
+                </td>
+
+                <td className="py-4">
                   {Number(account.balance).toLocaleString()}
                 </td>
 
@@ -124,6 +150,7 @@ export function AccountsTable() {
                       Saldo inicial
                     </button>
                   )}
+                  <button onClick={() => deleteAccount(account)} className="ml-2 rounded-lg bg-red-600/20 px-3 py-2 text-sm text-red-400 hover:bg-red-600/30">Borrar</button>
                 </td>
               </tr>
             ))}

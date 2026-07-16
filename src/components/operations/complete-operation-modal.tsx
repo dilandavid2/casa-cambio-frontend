@@ -59,7 +59,7 @@ export function CompleteOperationModal({
       setLoading(true);
 
       await api.patch(`/operations/${operationId}/complete`, {
-        confirmedByUserId: 1,
+        amountTargetFinal: Number(amountTargetEstimated),
       });
 
       onCompleted();

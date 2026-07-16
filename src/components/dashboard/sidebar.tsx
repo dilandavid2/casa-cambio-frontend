@@ -8,10 +8,20 @@ import {
   Wallet,
   AlertTriangle,
   Repeat,
+  LogOut,
+  Coins,
 } from "lucide-react";
+import { api } from "@/services/api";
+import { useRouter } from "next/navigation";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function logout() {
+    await api.post("/auth/logout");
+    router.replace("/login");
+  }
 
   const menuItems = [
     {
@@ -28,6 +38,11 @@ export function Sidebar() {
       label: "Operaciones",
       href: "/operations",
       icon: Repeat,
+    },
+    {
+      label: "Monedas",
+      href: "/currencies",
+      icon: Coins,
     },
     {
       label: "Verificaciones",
@@ -70,6 +85,13 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <button
+        onClick={logout}
+        className="mt-8 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+      >
+        <LogOut size={18} />
+        Cerrar sesión
+      </button>
     </aside>
   );
 }

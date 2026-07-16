@@ -11,6 +11,7 @@ interface OperationSummary {
   operation: {
     id: number;
     code: string;
+    paymentMode?: "IMMEDIATE" | "PENDING";
     operationDate: string;
     createdAt?: string;
     amountSource: number;
@@ -224,7 +225,8 @@ export function OperationDetail({ operationId }: Props) {
           Detalle completo de operación
         </p>
         <div className="mt-4 flex gap-3">
-          {(data.saldoPendiente ?? 0) > 0 &&
+          {operation.paymentMode === "PENDING" &&
+          (data.saldoPendiente ?? 0) > 0 &&
           operation.status !== "Completada" && (
             <button
               onClick={() => setShowPaymentModal(true)}
@@ -270,7 +272,9 @@ export function OperationDetail({ operationId }: Props) {
             }`}
           >
             {data.paymentStatus === "PAID"
-              ? "Pagada"
+              ? operation.status !== "Completada"
+                ? "Pagado · por completar"
+                : "Pagado"
               : data.paymentStatus === "PARTIAL"
               ? "Parcial"
               : "Pendiente"}
@@ -279,7 +283,7 @@ export function OperationDetail({ operationId }: Props) {
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-zinc-400">
-                Total abonado
+                {operation.paymentMode === "PENDING" ? "Total abonado" : "Monto pagado"}
               </span>
 
               <span className="font-semibold">
