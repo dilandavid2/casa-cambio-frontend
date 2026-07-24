@@ -23,11 +23,15 @@ export function ActiveAccountsByCurrency() {
 
   useEffect(() => {
     async function loadAccounts() {
-      const response = await api.get("/accounts");
-      setAccounts(response.data || []);
+      try {
+        const response = await api.get("/accounts");
+        setAccounts(response.data || []);
+      } catch (error) {
+        console.error("No se pudieron cargar las cuentas", error);
+      }
     }
 
-    loadAccounts();
+    void loadAccounts();
   }, []);
 
     const grouped = accounts.reduce<Record<string, Account[]>>((acc, account) => {

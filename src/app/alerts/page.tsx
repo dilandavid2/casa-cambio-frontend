@@ -14,6 +14,7 @@ interface TransferVerification {
   operation: {
     id: number;
     code: string;
+    description?: string;
     amountSource: number;
     valueCOP: number;
     pendingAmount: number;
@@ -52,7 +53,6 @@ export default function AlertsPage() {
       if (!confirmed) return;
 
       await api.patch(`/transfer-verifications/${id}/confirm`, {
-        verifiedById: 1,
         notes: "Dinero confirmado desde el panel de alertas",
       });
 
@@ -133,7 +133,7 @@ export default function AlertsPage() {
                     <p className="mt-2 text-zinc-400">
                       Operación:{" "}
                       <span className="font-semibold text-white">
-                        {item.operation?.code}
+                        {item.operation?.description || item.operation?.code}
                       </span>
                     </p>
 

@@ -36,7 +36,7 @@ interface Props {
 }
 
 export function CreateOperationModal({ onClose, onCreated }: Props) {
-  const [code, setCode] = useState("");
+  const [description, setDescription] = useState("");
   const [amountSource, setAmountSource] = useState("");
   const [sourceCurrencyId, setSourceCurrencyId] = useState("");
   const [sourceAccountId, setSourceAccountId] = useState("");
@@ -44,10 +44,9 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [operationDate, setOperationDate] = useState("");
   const [clientName, setClientName] = useState("");
-  const [manualRateToCOP, setManualRateToCOP] = useState("");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [useSplits, setUseSplits] = useState(false);
-  const [copToTargetRate, setCopToTargetRate] = useState("");
+  const [directRate, setDirectRate] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
   const [calculationMode, setCalculationMode] = useState<"RATE" | "AMOUNT">("AMOUNT");
   const [paymentMode, setPaymentMode] = useState<"IMMEDIATE" | "PENDING">("IMMEDIATE");
@@ -61,6 +60,8 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
     },
   ]);
   const [targetAccountId, setTargetAccountId] = useState("");
+  const [clientSuggestions, setClientSuggestions] = useState<string[]>([]);
+  const [descriptionSuggestions, setDescriptionSuggestions] = useState<string[]>([]);
 
     const sourceCurrencyCode =
   currencies.find((currency) => currency.id === Number(sourceCurrencyId))
@@ -68,6 +69,10 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
     const targetCurrencyCode =
   currencies.find((currency) => currency.id === Number(targetCurrencyId))
     ?.code || "";
+    const resolvedTargetAmount =
+      calculationMode === "RATE" && Number(directRate) > 0
+        ? Number(amountSource || 0) / Number(directRate)
+        : Number(targetAmount || 0);
 
     
 
@@ -89,6 +94,36 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
     useEffect(() => {
       loadInitialData();
     }, []);
+
+    useEffect(() => {
+      const timer = window.setTimeout(async () => {
+        try {
+          const response = await api.get("/operations/suggestions", {
+            params: { q: clientName },
+          });
+          setClientSuggestions(response.data.clients ?? []);
+        } catch (error) {
+          console.error(error);
+        }
+      }, 250);
+
+      return () => window.clearTimeout(timer);
+    }, [clientName]);
+
+    useEffect(() => {
+      const timer = window.setTimeout(async () => {
+        try {
+          const response = await api.get("/operations/suggestions", {
+            params: { q: description },
+          });
+          setDescriptionSuggestions(response.data.descriptions ?? []);
+        } catch (error) {
+          console.error(error);
+        }
+      }, 250);
+
+      return () => window.clearTimeout(timer);
+    }, [description]);
 
     function updateSplit(index: number, field: keyof SplitItem, value: string) {
       const updated = splits.map((split, itemIndex) => {
@@ -127,6 +162,10 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
         alert("Debes seleccionar una fecha");
         return;
       }
+      if (!clientName.trim() || !description.trim()) {
+        alert("Debes indicar el nombre del cliente y una descripción");
+        return;
+      }
       const fechaOperacion = new Date(`${operationDate}T12:00:00`);
       const hoy = new Date();
       const fechaMinima = new Date("2024-01-01");
@@ -163,47 +202,46 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
       if (
         paymentMode === "IMMEDIATE" &&
         !useSplits &&
-        Number(targetAmount) <= 0
+        resolvedTargetAmount <= 0
       ) {
-        alert("Debes indicar cuánto recibirá el cliente");
+        alert(
+          calculationMode === "RATE"
+            ? "Debes indicar una tasa válida"
+            : "Debes indicar cuánto recibirá el cliente",
+        );
         return;
       }
       const amount = Number(amountSource);
       const calculatedSourceRate =
         sourceCurrencyCode === "COP"
           ? 1
-          : targetCurrencyCode === "COP" && Number(targetAmount) > 0
-            ? Number(targetAmount) / amount
-            : Number(manualRateToCOP);
-
-      if (
-        sourceCurrencyCode !== "COP" &&
-        targetCurrencyCode !== "COP" &&
-        calculatedSourceRate <= 0
-      ) {
-        alert("Para cambios entre dos monedas extranjeras indica la tasa de la moneda que ingresa a COP");
-        return;
-      }
+          : targetCurrencyCode === "COP" && resolvedTargetAmount > 0
+            ? resolvedTargetAmount / amount
+            : undefined;
 
       const valueCOP =
         paymentMode === "IMMEDIATE"
-          ? amount * calculatedSourceRate
+          ? calculatedSourceRate
+            ? amount * calculatedSourceRate
+            : undefined
           : amount;
 
       const calculatedTargetRate =
         targetCurrencyCode === "COP"
           ? 1
-          : valueCOP / Number(targetAmount);
+          : valueCOP
+            ? valueCOP / resolvedTargetAmount
+            : undefined;
       const amountTargetEstimated =
         paymentMode === "IMMEDIATE"
           ? useSplits
             ? 0
             : targetCurrencyCode === "COP"
               ? valueCOP
-              : Number(targetAmount)
+              : resolvedTargetAmount
           : amount;
       await api.post("/operations", {
-        code,
+        description: description.trim(),
         clientName,
         sourceCurrencyId:
           paymentMode === "IMMEDIATE"
@@ -226,7 +264,7 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
         copToTargetRate: calculatedTargetRate
           ? calculatedTargetRate
           : undefined,
-        manualRateToCOP: calculatedSourceRate || undefined,
+        manualRateToCOP: calculatedSourceRate,
         operationDate: operationDate
           ? new Date(`${operationDate}T12:00:00`).toISOString()
           : new Date().toISOString(),
@@ -281,17 +319,17 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
   const originRate =
     sourceCurrencyCode === "COP"
       ? 1
-      : targetCurrencyCode === "COP" && Number(targetAmount) > 0
-        ? Number(targetAmount) / Number(amountSource || 1)
-        : Number(manualRateToCOP || 0);
+      : targetCurrencyCode === "COP" && resolvedTargetAmount > 0
+        ? resolvedTargetAmount / Number(amountSource || 1)
+        : 0;
 
   const totalOriginCOP =
     Number(amountSource || 0) * originRate;
 
   const remainingAmount = totalOriginCOP - totalSplits;
   const crossRate =
-    Number(amountSource) > 0 && Number(targetAmount) > 0
-      ? Number(targetAmount) / Number(amountSource)
+    Number(amountSource) > 0 && resolvedTargetAmount > 0
+      ? resolvedTargetAmount / Number(amountSource)
       : 0;
   const inverseCrossRate = crossRate > 0 ? 1 / crossRate : 0;
   const formatRate = (value: number) =>
@@ -310,17 +348,29 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
     
         <div className="space-y-4">
           <input
-          value={clientName}
-          onChange={(e) => setClientName(e.target.value)}
-          placeholder="Nombre del cliente"
-          className="w-full rounded-lg border border-zinc-700 bg-black px-4 py-3 text-white outline-none"
-        />
+            list="client-name-suggestions"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            placeholder="Nombre del cliente"
+            className="w-full rounded-lg border border-zinc-700 bg-black px-4 py-3 text-white outline-none"
+          />
+          <datalist id="client-name-suggestions">
+            {clientSuggestions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
           <input
-            placeholder="Código. Ej: OP-FRONT-001"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
+            placeholder="Descripción. Ej: Cambio para viaje"
+            list="operation-description-suggestions"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3"
           />
+          <datalist id="operation-description-suggestions">
+            {descriptionSuggestions.map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
 
           <input
             type="date"
@@ -340,8 +390,7 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
               if (mode === "PENDING") {
                 setSourceCurrencyId("");
                 setSourceAccountId("");
-                setManualRateToCOP("");
-                setCopToTargetRate("");
+                setDirectRate("");
                 setUseSplits(false);
               }
             }}
@@ -393,19 +442,6 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
                   ))}
               </select>
 
-              {sourceCurrencyCode !== "COP" && targetCurrencyCode !== "COP" && targetCurrencyId && <div className="space-y-2">
-                <label className="text-sm text-zinc-400">
-                  Referencia contable: 1 {sourceCurrencyCode} en COP
-                </label>
-
-                <input
-                  type="number"
-                  value={manualRateToCOP}
-                  onChange={(e) => setManualRateToCOP(e.target.value)}
-                  placeholder="Necesaria para utilidad y reportes en COP"
-                  className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3"
-                />
-              </div>}
             </>
           )}
 
@@ -426,23 +462,29 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
 
             {paymentMode === "IMMEDIATE" && !useSplits && targetCurrencyId && (
               <div className="space-y-2">
-                <div className="hidden grid-cols-2 gap-2 rounded-lg border border-zinc-700 p-1">
-                    <button type="button" onClick={() => setCalculationMode("RATE")} className={`rounded-md px-3 py-2 ${calculationMode === "RATE" ? "bg-white text-black" : "text-zinc-400"}`}>Colocar tasa</button>
-                    <button type="button" onClick={() => setCalculationMode("AMOUNT")} className={`rounded-md px-3 py-2 ${calculationMode === "AMOUNT" ? "bg-white text-black" : "text-zinc-400"}`}>Colocar monto</button>
+                <div className="grid grid-cols-2 gap-2 rounded-lg border border-zinc-700 p-1">
+                    <button type="button" onClick={() => { setCalculationMode("RATE"); setTargetAmount(""); }} className={`rounded-md px-3 py-2 ${calculationMode === "RATE" ? "bg-white text-black" : "text-zinc-400"}`}>Colocar tasa</button>
+                    <button type="button" onClick={() => { setCalculationMode("AMOUNT"); setDirectRate(""); }} className={`rounded-md px-3 py-2 ${calculationMode === "AMOUNT" ? "bg-white text-black" : "text-zinc-400"}`}>Colocar monto</button>
                 </div>
                 {calculationMode === "RATE" ? (
-                  targetCurrencyCode === "COP" ? (
-                    <p className="text-sm text-zinc-400">Usa la tasa de la moneda recibida indicada arriba.</p>
-                  ) : (
-                  <input type="number" step="0.0001" value={copToTargetRate} onChange={(e) => setCopToTargetRate(e.target.value)} placeholder={`Tasa de ${targetCurrencyCode || "destino"} a COP`} className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3" />
-                  )
+                  <div className="space-y-2">
+                    <label className="text-sm text-zinc-400">
+                      1 {targetCurrencyCode || "moneda destino"} equivale a cuántos {sourceCurrencyCode || "moneda origen"}
+                    </label>
+                    <input type="number" min="0" step="any" value={directRate} onChange={(e) => setDirectRate(e.target.value)} placeholder={`Ej: 1 ${targetCurrencyCode || "destino"} = ? ${sourceCurrencyCode || "origen"}`} className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3" />
+                  </div>
                 ) : (
                   <input type="number" step="0.01" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} placeholder={`Monto que recibirá el cliente en ${targetCurrencyCode || "moneda destino"}`} className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3" />
                 )}
-                {calculationMode === "AMOUNT" && Number(targetAmount) > 0 && (
+                {resolvedTargetAmount > 0 && (
                   <div className="rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-sm text-zinc-300">
                     <p>1 {sourceCurrencyCode} = <strong>{formatRate(crossRate)} {targetCurrencyCode}</strong></p>
                     <p>1 {targetCurrencyCode} = <strong>{formatRate(inverseCrossRate)} {sourceCurrencyCode}</strong></p>
+                    {calculationMode === "RATE" && (
+                      <p className="mt-2 text-green-400">
+                        Cliente recibe: <strong>{resolvedTargetAmount.toLocaleString("es-CO", { maximumFractionDigits: 8 })} {targetCurrencyCode}</strong>
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -596,14 +638,16 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
           </div>
           )}
 
-          {paymentMode === "IMMEDIATE" && !useSplits && amountSource && targetCurrencyId && (sourceCurrencyCode === "COP" || manualRateToCOP || (calculationMode === "AMOUNT" && targetCurrencyCode === "COP" && targetAmount)) && (targetCurrencyCode === "COP" || (calculationMode === "RATE" ? copToTargetRate : targetAmount)) && (
+          {paymentMode === "IMMEDIATE" && !useSplits && amountSource && targetCurrencyId && resolvedTargetAmount > 0 && (
             <div className="rounded-lg border border-zinc-700 bg-zinc-800 p-4 text-sm space-y-2">
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Valor equivalente COP:</span>
-                <span>
-                  {totalOriginCOP.toLocaleString("es-CO")} COP
-                </span>
-              </div>
+              {(sourceCurrencyCode === "COP" || targetCurrencyCode === "COP") && (
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Valor equivalente COP:</span>
+                  <span>
+                    {totalOriginCOP.toLocaleString("es-CO")} COP
+                  </span>
+                </div>
+              )}
 
               <div className="flex justify-between">
                 <span className="text-zinc-400">Tasa utilizada:</span>
@@ -616,9 +660,7 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
                   {(
                     targetCurrencyCode === "COP"
                       ? totalOriginCOP
-                      : calculationMode === "AMOUNT"
-                        ? Number(targetAmount)
-                        : totalOriginCOP / Number(copToTargetRate)
+                      : resolvedTargetAmount
                   ).toLocaleString("es-CO")}{" "}
                   {currencies.find((c) => c.id === Number(targetCurrencyId))?.code}
                 </span>

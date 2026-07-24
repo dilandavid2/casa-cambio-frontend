@@ -9,6 +9,7 @@ import { CompleteOperationModal } from "@/components/operations/complete-operati
 interface Operation {
   id: number;
   code: string;
+  description?: string;
   amountSource: number;
   amountTargetEstimated: number;
   amountTargetFinal?: number;
@@ -98,6 +99,7 @@ const filteredOperations = operations.filter((operation) => {
   const text = search.toLowerCase();
 
   const matchesSearch =
+    operation.description?.toLowerCase().includes(text) ||
     operation.code?.toLowerCase().includes(text) ||
     operation.client?.name?.toLowerCase().includes(text) ||
     operation.sourceCurrency?.code?.toLowerCase().includes(text) ||
@@ -177,7 +179,7 @@ const sortedOperations = [...filteredOperations].sort(
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por código, cliente o moneda..."
+            placeholder="Buscar por descripción, cliente o moneda..."
             className="rounded-lg border border-zinc-700 bg-black px-4 py-3 text-white outline-none focus:border-white"
           />
 
@@ -223,7 +225,7 @@ const sortedOperations = [...filteredOperations].sort(
           <thead className="border-b border-zinc-800 text-zinc-400">
             <tr>
               <th className="py-3">Fecha</th>
-              <th className="py-3 text-left">Código</th>
+              <th className="py-3 text-left">Descripción</th>
               <th className="py-3 text-left">Cliente</th>
               <th className="py-3 text-left">Tipo</th>
               <th className="py-3 text-left">Estado</th>
@@ -244,7 +246,9 @@ const sortedOperations = [...filteredOperations].sort(
                   {new Date(operation.operationDate).toLocaleDateString("es-CO")}
                 </td>
 
-                <td className="py-4 font-medium">{operation.code}</td>
+                <td className="py-4 font-medium">
+                  {operation.description || operation.code}
+                </td>
                 <td className="py-4">{operation.client?.name ?? "N/A"}</td>
                 <td className="py-4">
                   <span
@@ -309,7 +313,9 @@ const sortedOperations = [...filteredOperations].sort(
                     Ver
                   </Link>
 
-                  {operation.status?.name === "Creada" && (
+                  {["Creada", "Verificada"].includes(
+                    operation.status?.name ?? ""
+                  ) && (
                     <button
                       onClick={() => setSelectedOperation(operation)}
                       className="rounded-lg bg-green-500 px-3 py-2 text-xs font-medium text-white hover:bg-green-600"

@@ -4,6 +4,7 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { AlertsPanel } from "@/components/dashboard/alerts-panel";
 import { TopAccountsTable } from "@/components/dashboard/top-accounts-table";
 import { ActiveAccountsByCurrency } from "@/components/dashboard/active-accounts-by-currency";
+import { PrimaryRates } from "@/components/dashboard/primary-rates";
 
 export default function DashboardPage() {
   return (
@@ -14,6 +15,7 @@ export default function DashboardPage() {
         <Header />
 
         <StatsCards />
+        <PrimaryRates />
         <ActiveAccountsByCurrency />
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

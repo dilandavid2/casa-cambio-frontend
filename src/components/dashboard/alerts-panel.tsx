@@ -28,11 +28,14 @@ interface AlertsResponse {
 }
 interface PendingVerification {
   id: number;
+  createdAt?: string;
   operation?: {
+    id?: number;
     client?: {
       name?: string;
     };
     code?: string;
+    description?: string;
   };
 }
 
@@ -42,21 +45,27 @@ export function AlertsPanel() {
 
   useEffect(() => {
     async function loadAlerts() {
-      const financialRes = await api.get("/dashboard/financial-alerts");
-      const pendingRes = await api.get("/transfer-verifications/pending");
+      try {
+        const [financialRes, pendingRes] = await Promise.all([
+          api.get("/dashboard/financial-alerts"),
+          api.get("/transfer-verifications/pending"),
+        ]);
 
-      setData(financialRes.data);
-      setPendingVerifications(pendingRes.data || []);
+        setData(financialRes.data);
+        setPendingVerifications(pendingRes.data || []);
+      } catch (error) {
+        console.error("No se pudieron cargar las alertas", error);
+      }
     }
 
-    loadAlerts();
+    void loadAlerts();
   }, []);
 
   const verificationAlerts: AlertItem[] = [];
 
-  if (pendingVerifications.length >= 5) {
+  if (pendingVerifications.length > 0) {
     verificationAlerts.push({
-      alert: `Muchas transferencias pendientes por verificar (${pendingVerifications.length})`,
+      alert: `Transferencias VES pendientes por verificar (${pendingVerifications.length})`,
       name: "Revisión general",
     });
   }
@@ -104,7 +113,7 @@ export function AlertsPanel() {
       return "text-orange-400";
     }
 
-    if (alert.toLowerCase().includes("transferencias pendientes")) {
+    if (alert.toLowerCase().includes("pendientes por verificar")) {
       return "text-blue-400";
     }
 
@@ -130,7 +139,7 @@ export function AlertsPanel() {
             key={index}
             onClick={() => {
               if (
-                item.alert.includes("transferencias pendientes")
+                item.alert.includes("pendientes por verificar")
               ) {
                 window.location.href="/alerts";
               }

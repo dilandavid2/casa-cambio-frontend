@@ -11,6 +11,7 @@ interface OperationSummary {
   operation: {
     id: number;
     code: string;
+    description?: string;
     paymentMode?: "IMMEDIATE" | "PENDING";
     operationDate: string;
     createdAt?: string;
@@ -218,7 +219,7 @@ export function OperationDetail({ operationId }: Props) {
     <div className="space-y-6">
       <div>
         <h1 className="text-4xl font-bold">
-          {operation.code}
+          {operation.description || operation.code}
         </h1>
 
         <p className="mt-2 text-zinc-400">
