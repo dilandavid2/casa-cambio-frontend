@@ -155,6 +155,15 @@ export function OperationDetail({ operationId }: Props) {
       ? operation.targetCurrency
       : operation.targetCurrency?.code) ??
     "-";
+  const operationTargetAmount = Number(
+    operation.amountTargetFinal ?? operation.amountTargetEstimated ?? 0,
+  );
+  const directOperationRate =
+    operation.amountSource > 0 && operationTargetAmount > 0
+      ? operationTargetAmount / operation.amountSource
+      : 0;
+  const inverseOperationRate =
+    directOperationRate > 0 ? 1 / directOperationRate : 0;
 
   function formatDate(value?: string) {
     if (!value) return "Sin fecha";
@@ -345,17 +354,45 @@ export function OperationDetail({ operationId }: Props) {
           </div>
 
           <div>
-            <p className="text-zinc-400">Monto estimado</p>
+            <p className="text-zinc-400">
+              {operation.amountTargetFinal !== undefined &&
+              operation.amountTargetFinal !== null
+                ? "Monto final"
+                : "Monto estimado"}
+            </p>
             <p className="text-xl font-semibold text-green-400">
-              {operation.amountTargetEstimated.toLocaleString("es-CO")}
+              {operationTargetAmount.toLocaleString("es-CO")} {targetCurrency}
             </p>
           </div>
 
-          <div>
-            <p className="text-zinc-400">Tasa mercado</p>
-            <p className="text-xl font-semibold">
-              {operation.marketRate}
-            </p>
+          <div className="md:col-span-2">
+            <p className="text-zinc-400">Tasa de la operación</p>
+            {directOperationRate > 0 ? (
+              <div className="mt-1 space-y-1">
+                <p className="text-xl font-semibold">
+                  1 {sourceCurrency} ={" "}
+                  {directOperationRate.toLocaleString("es-CO", {
+                    maximumFractionDigits: 8,
+                  })}{" "}
+                  {targetCurrency}
+                </p>
+                <p className="text-sm text-zinc-400">
+                  1 {targetCurrency} ={" "}
+                  {inverseOperationRate.toLocaleString("es-CO", {
+                    maximumFractionDigits: 8,
+                  })}{" "}
+                  {sourceCurrency}
+                </p>
+                {operation.amountTargetFinal !== undefined &&
+                  operation.amountTargetFinal !== null && (
+                    <p className="text-xs text-green-400">
+                      Calculada con el monto final de la operación
+                    </p>
+                  )}
+              </div>
+            ) : (
+              <p className="text-xl font-semibold">-</p>
+            )}
           </div>
 
         </div>

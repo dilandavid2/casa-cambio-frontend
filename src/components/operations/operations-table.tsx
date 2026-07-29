@@ -45,6 +45,24 @@ interface Operation {
   operationDate: string;
 }
 
+function getOperationRate(operation: Operation) {
+  const sourceAmount = Number(operation.amountSource || 0);
+  const targetAmount = Number(
+    operation.amountTargetFinal ?? operation.amountTargetEstimated ?? 0,
+  );
+
+  return sourceAmount > 0 && targetAmount > 0
+    ? targetAmount / sourceAmount
+    : 0;
+}
+
+function formatRate(value: number) {
+  return value.toLocaleString("es-CO", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 8,
+  });
+}
+
 export function OperationsTable() {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -232,6 +250,7 @@ const sortedOperations = [...filteredOperations].sort(
               <th className="py-3 text-left">Origen</th>
               <th className="py-3 text-left">Destino</th>
               <th className="py-3 text-right">Monto</th>
+              <th className="py-3 text-right">Tasa</th>
               <th className="py-3 text-center">Pago</th>
               <th className="py-3 text-right">Pendiente</th>
               <th className="py-3 text-right">Estimado</th>
@@ -276,6 +295,13 @@ const sortedOperations = [...filteredOperations].sort(
                 <td className="py-4">{operation.targetCurrency?.code}</td>
                 <td className="py-4 text-right">
                   {operation.amountSource?.toLocaleString("es-CO")}
+                </td>
+                <td className="py-4 text-right whitespace-nowrap">
+                  {getOperationRate(operation) > 0
+                    ? `1 ${operation.sourceCurrency?.code ?? ""} = ${formatRate(
+                        getOperationRate(operation),
+                      )} ${operation.targetCurrency?.code ?? ""}`
+                    : "-"}
                 </td>
                 <td className="py-4 text-center">
                   <span
@@ -336,7 +362,7 @@ const sortedOperations = [...filteredOperations].sort(
 
             {operations.length === 0 && (
               <tr>
-                <td colSpan={10} className="py-6 text-center text-zinc-400">
+                <td colSpan={13} className="py-6 text-center text-zinc-400">
                   No hay operaciones registradas.
                 </td>
               </tr>
