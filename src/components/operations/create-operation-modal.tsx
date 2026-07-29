@@ -69,6 +69,8 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
     const targetCurrencyCode =
   currencies.find((currency) => currency.id === Number(targetCurrencyId))
     ?.code || "";
+    const isSameCurrency =
+      Boolean(sourceCurrencyId) && sourceCurrencyId === targetCurrencyId;
     const resolvedTargetAmount =
       calculationMode === "RATE" && Number(directRate) > 0
         ? Number(amountSource || 0) / Number(directRate)
@@ -478,8 +480,18 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
                 )}
                 {resolvedTargetAmount > 0 && (
                   <div className="rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-sm text-zinc-300">
-                    <p>1 {sourceCurrencyCode} = <strong>{formatRate(crossRate)} {targetCurrencyCode}</strong></p>
-                    <p>1 {targetCurrencyCode} = <strong>{formatRate(inverseCrossRate)} {sourceCurrencyCode}</strong></p>
+                    {isSameCurrency && calculationMode === "AMOUNT" ? (
+                      <>
+                        <p>Entra: <strong>{Number(amountSource).toLocaleString("es-CO")} {sourceCurrencyCode}</strong></p>
+                        <p>Se entrega: <strong>{resolvedTargetAmount.toLocaleString("es-CO")} {targetCurrencyCode}</strong></p>
+                        <p>Diferencia: <strong>{(Number(amountSource) - resolvedTargetAmount).toLocaleString("es-CO")} {sourceCurrencyCode}</strong></p>
+                      </>
+                    ) : (
+                      <>
+                        <p>1 {sourceCurrencyCode} = <strong>{formatRate(crossRate)} {targetCurrencyCode}</strong></p>
+                        <p>1 {targetCurrencyCode} = <strong>{formatRate(inverseCrossRate)} {sourceCurrencyCode}</strong></p>
+                      </>
+                    )}
                     {calculationMode === "RATE" && (
                       <p className="mt-2 text-green-400">
                         Cliente recibe: <strong>{resolvedTargetAmount.toLocaleString("es-CO", { maximumFractionDigits: 8 })} {targetCurrencyCode}</strong>
@@ -498,7 +510,11 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
               >
                 <option value="">Cuenta de donde sale el dinero</option>
                 {accounts
-                  .filter((account) => account.currency?.id === Number(targetCurrencyId))
+                  .filter(
+                    (account) =>
+                      account.currency?.id === Number(targetCurrencyId) &&
+                      account.id !== Number(sourceAccountId),
+                  )
                   .map((account) => (
                     <option key={account.id} value={account.id}>
                       {account.name} - {account.country} - Saldo:{" "}
@@ -650,8 +666,14 @@ export function CreateOperationModal({ onClose, onCreated }: Props) {
               )}
 
               <div className="flex justify-between">
-                <span className="text-zinc-400">Tasa utilizada:</span>
-                <span>1 {sourceCurrencyCode} = {formatRate(crossRate)} {targetCurrencyCode}</span>
+                <span className="text-zinc-400">
+                  {isSameCurrency ? "Diferencia:" : "Tasa utilizada:"}
+                </span>
+                <span>
+                  {isSameCurrency
+                    ? `${(Number(amountSource) - resolvedTargetAmount).toLocaleString("es-CO")} ${sourceCurrencyCode}`
+                    : `1 ${sourceCurrencyCode} = ${formatRate(crossRate)} ${targetCurrencyCode}`}
+                </span>
               </div>
 
               <div className="flex justify-between font-bold text-green-400">
